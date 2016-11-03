@@ -136,14 +136,17 @@
         } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
             
             NSLog(@"上传成功 %@",responseObject);
-            
-            NSDictionary *dic = (NSDictionary *)responseObject;
-            NSDictionary *dict = dic[@"data"];
-            NSString *url = dict[@"url"];
-            
-            NSLog(@"打印 url  --- %@",url);
-            [[NSUserDefaults standardUserDefaults] setObject:url forKey:@"url"];
-            [[NSUserDefaults standardUserDefaults] synchronize];
+//            
+//            if ([responseObject[@"data"] isEqualToString:@"<null>"]) return ;
+//            
+//            
+//            NSDictionary *dic = (NSDictionary *)responseObject;
+//            NSDictionary *dict = dic[@"data"];
+//            NSString *url = dict[@"url"];
+//            
+//            NSLog(@"打印 url  --- %@",url);
+//            [[NSUserDefaults standardUserDefaults] setObject:url forKey:@"url"];
+//            [[NSUserDefaults standardUserDefaults] synchronize];
             
             
             
@@ -169,10 +172,10 @@
 #pragma mark - 播放http
 - (void)playHttp:(NSString *)urlString
 {
-    //    NSURL *url = [NSURL URLWithString:@"http://www.hjourney.cn/onemq/Uploads/Attach/2016-11-03/14781584937kbn0K.mp3"];
+    NSURL *url = [NSURL URLWithString:@"http://www.hjourney.cn/onemq/Uploads/Attach/2016-11-03/14781584937kbn0K.mp3"];
     
-    NSString *str = [[NSUserDefaults standardUserDefaults] objectForKey:@"url"];
-    NSURL *url = [NSURL URLWithString:str];
+//    NSString *str = [[NSUserDefaults standardUserDefaults] objectForKey:@"url"];
+//    NSURL *url = [NSURL URLWithString:str];
     
     STKDataSource *dataSource = [STKAudioPlayer dataSourceFromURL:url];
     
