@@ -11,7 +11,7 @@
 #import "AFNetworking.h"
 #import "STKAudioPlayer.h"
 #import "SampleQueueId.h"
-
+#import "lame.h"
 @interface CXHRecordView () <CXHRecordToolDelegate>
 
 /** 播放工具 */
@@ -112,8 +112,7 @@
         //
         //        NSURL *mp3Url = [self transformCAFToMP3:fileUrl];
         
-        
-        
+    
         AFHTTPSessionManager *manager = [AFHTTPSessionManager manager];
         manager.responseSerializer.acceptableContentTypes = [NSSet setWithObjects:@"application/json", @"text/json", @"text/javascript",@"text/html",@"image/jpeg", nil];
         NSMutableDictionary *para = [NSMutableDictionary dictionary];
@@ -122,10 +121,10 @@
         para[@"uid"] = @"56dfcb079c9e41987ac5272c";
         para[@"device_type"] = @"ios";
         para[@"video"] = @"xxxxx.mp3";
-        [manager POST:@"http://push.hjourney.cn/api.php?c=Index2" parameters:para constructingBodyWithBlock:^(id<AFMultipartFormData>  _Nonnull formData) {
-            //              application/octer-stream   audio/mpeg video/mp4   application/octet-stream
+        [manager POST:@"http://push.hjourney.cn" parameters:para constructingBodyWithBlock:^(id<AFMultipartFormData>  _Nonnull formData) {
             
-            //            NSLog(@"mp3url--------   %@",mp3Url);
+            // application/octer-stream   audio/mpeg video/mp4   application/octet-stream
+            
             [formData appendPartWithFileURL:self.recordTool.recorder.url name:@"video" fileName:@"xxx.mp3" mimeType:@"application/octet-stream" error:nil];
             
         } progress:^(NSProgress * _Nonnull uploadProgress) {
@@ -136,20 +135,7 @@
         } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
             
             NSLog(@"上传成功 %@",responseObject);
-//            
-//            if ([responseObject[@"data"] isEqualToString:@"<null>"]) return ;
-//            
-//            
-//            NSDictionary *dic = (NSDictionary *)responseObject;
-//            NSDictionary *dict = dic[@"data"];
-//            NSString *url = dict[@"url"];
-//            
-//            NSLog(@"打印 url  --- %@",url);
-//            [[NSUserDefaults standardUserDefaults] setObject:url forKey:@"url"];
-//            [[NSUserDefaults standardUserDefaults] synchronize];
-            
-            
-            
+
         } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
             NSLog(@"上传失败 %@",error);
         }];
@@ -233,4 +219,60 @@
     self.imageView.image = [UIImage imageNamed:imageName];
 }
 
+// .caf --> .mp3
+- (NSURL *)transformCAFToMP3:(NSURL *)sourceUrl
+{
+    NSURL *mp3FilePath,*audioFileSavePath;
+
+    NSString *path = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
+    mp3FilePath = [NSURL URLWithString:[path stringByAppendingPathComponent:@"test.mp3"]];
+
+    @try {
+        int read, write;
+
+        FILE *pcm = fopen([[sourceUrl absoluteString] cStringUsingEncoding:1], "rb");   //source 被转换的音频文件位置
+        fseek(pcm, 4*1024, SEEK_CUR);                                                   //skip file header
+        FILE *mp3 = fopen([[mp3FilePath absoluteString] cStringUsingEncoding:1], "wb"); //output 输出生成的Mp3文件位置
+
+        NSLog(@"sour-- %@   last-- %@",sourceUrl,mp3FilePath);
+//        sour-- //Users/chenxihang/Library/Developer/CoreSimulator/Devices/35F46DFB-3878-44EE-BBC4-B4EEB494548A/data/Containers/Data/App ... cord.caf
+//        last-- /Users/chenxihang/Library/Developer/CoreSimulator/Devices/35F46DFB-3878-44EE-BBC4-B4EEB494548A/data/Containers/Data/Appl ... test.mp3
+
+        const int PCM_SIZE = 8192;
+        const int MP3_SIZE = 8192;
+        short int pcm_buffer[PCM_SIZE*2];
+        unsigned char mp3_buffer[MP3_SIZE];
+
+        lame_t lame = lame_init();
+        lame_set_in_samplerate(lame, 11025.0);
+        lame_set_VBR(lame, vbr_default);
+        lame_init_params(lame);
+
+        do {
+            read = fread(pcm_buffer, 2*sizeof(short int), PCM_SIZE, pcm);
+            if (read == 0)
+                write = lame_encode_flush(lame, mp3_buffer, MP3_SIZE);
+            else
+                write = lame_encode_buffer_interleaved(lame, pcm_buffer, read, mp3_buffer, MP3_SIZE);
+
+            fwrite(mp3_buffer, write, 1, mp3);
+
+        } while (read != 0);
+
+        lame_close(lame);
+        fclose(mp3);
+        fclose(pcm);
+    }
+    @catch (NSException *exception) {
+        NSLog(@"%@",[exception description]);
+    }
+    @finally {
+        audioFileSavePath = mp3FilePath;
+        NSLog(@"MP3生成成功: %@",audioFileSavePath);
+        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"mp3转化成功！" message:nil delegate:self cancelButtonTitle:@"确定" otherButtonTitles:nil, nil];
+        [alert show];
+    }
+
+    return audioFileSavePath;
+}
 @end
